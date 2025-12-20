@@ -1,0 +1,34 @@
+@startuml
+title Control Service
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Person(user, "Пользователь", "Владелец умного дома")
+Container(api_gateway, "API Gateway", "Kotlin", "Маршрутизация запросов")
+
+Container_Boundary(web_app_boundary, "Web Application") {
+    Component(ui_dashboard, "Dashboard UI", "React Component", "Главная панель с обзором всех устройств")
+    Component(ui_devices, "Device Management UI", "React Component", "Управление устройствами: добавление, настройка, удаление")
+    Component(ui_telemetry, "Telemetry View", "React Component", "Графики и история показаний датчиков")
+    Component(ui_scenarios, "Scenarios UI", "React Component", "Создание и управление сценариями автоматизации")
+    Component(ui_profile, "Profile UI", "React Component", "Профиль пользователя, настройки")
+    Component(state_manager, "State Manager", "Redux/Context", "Управление состоянием приложения")
+    Component(api_client, "API Client", "Axios/Fetch", "HTTP клиент для взаимодействия с backend")
+}
+
+Rel(user, ui_dashboard, "Просматривает", "HTTPS")
+Rel(user, ui_devices, "Управляет", "HTTPS")
+Rel(user, ui_telemetry, "Анализирует", "HTTPS")
+Rel(user, ui_scenarios, "Настраивает", "HTTPS")
+Rel(user, ui_profile, "Редактирует", "HTTPS")
+
+Rel(ui_dashboard, state_manager, "Обновляет состояние")
+Rel(ui_devices, state_manager, "Обновляет состояние")
+Rel(ui_telemetry, state_manager, "Обновляет состояние")
+Rel(ui_scenarios, state_manager, "Обновляет состояние")
+Rel(ui_profile, state_manager, "Обновляет состояние")
+
+Rel(state_manager, api_client, "Инициирует запросы")
+Rel(api_client, api_gateway, "HTTP/JSON", "HTTPS")
+
+@enduml

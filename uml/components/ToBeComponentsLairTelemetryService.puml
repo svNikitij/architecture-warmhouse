@@ -1,0 +1,30 @@
+@startuml
+title Telemetry Service
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Container(api_gateway, "API Gateway", "Kotlin", "Маршрутизация запросов")
+Container(broker, "Message Broker", "MQTT", "Обмен сообщениями")
+ContainerDb(timescale, "TimescaleDB", "", "Временные ряды")
+
+Container_Boundary(telemetry_service_boundary, "Telemetry Service") {
+    Component(telemetry_jRPC_api, "Telemetry jRPC API", "Kotlin", "Обработка jRPC запросов телеметрии")
+    Component(telemetry_collector, "Telemetry Collector", "Kotlin", "Сбор данных с устройств")
+    Component(telemetry_data_parser, "Data Parser", "Kotlin", "Парсинг данных от разных типов устройств")
+    Component(telemetry_data_aggregator, "Data Aggregator", "Kotlin", "Агрегация данных по времени")
+    Component(telemetry_data_validator, "Data Validator", "Kotlin", "Проверка корректности данных")
+    Component(telemetry_repository, "Telemetry Repository", "Kotlin", "Доступ к временным рядам")
+    Component(telemetry_alert_detector, "Alert Detector", "Kotlin", "Обнаружение аномалий и тревог")
+}
+
+Rel(telemetry_collector, telemetry_data_parser, "Сырые данные")
+Rel(telemetry_data_parser, telemetry_data_validator, "Распарсенные данные")
+Rel(telemetry_data_validator, telemetry_alert_detector, "Проверенные данные")
+Rel(telemetry_data_validator, telemetry_repository, "Сохранение данных")
+Rel(telemetry_jRPC_api, telemetry_data_aggregator, "Запрос агрегированных данных")
+Rel(telemetry_data_aggregator, telemetry_repository, "Чтение данных")
+Rel(telemetry_repository, timescale, "SQL запросы", "TCP/SQL")
+Rel(api_gateway, telemetry_jRPC_api, "Запросы данных", "jRPC")
+Rel(broker, telemetry_collector, "Данные с устройств", "MQTT")
+
+@enduml

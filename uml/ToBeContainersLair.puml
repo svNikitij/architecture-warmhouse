@@ -1,0 +1,47 @@
+@startuml
+title Платформа «Тёплый дом» - Целевая архитектура (C4 Container Diagram)
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Container.puml
+
+Person(user, "Пользователь", "Управляет умным домом через веб/мобильное приложение")
+Person(support, "Служба поддержки", "Помогает пользователям с настройкой и проблемами")
+
+System_Boundary(platform, "Платформа «Тёплый дом»") {
+    Container(web_app, "Web app", "React", "1 и просмотра телеметрии")
+    Container(api_gateway, "API Gateway", "Kotlin", "Точка входа, маршрутизация запросов, аутентификация")
+
+    Container(device_service, "Device Service", "Kotlin", "Управление устройствами: регистрация, каталог устройств")
+    Container(telemetry_service, "Telemetry Service", "Kotlin", "Сбор и хранение данных с устройств и их состояния")
+    Container(control_service, "Control Service", "Kotlin", "Отправка команд устройствам")
+    Container(rule_service, "Rule Engine", "Kotlin", "Автоматизация: сценарии и правила работы устройств")
+    Container(user_service, "User Service", "Kotlin", "Управление пользователями и доступом")
+
+    ContainerDb(postgres, "PostgreSQL", "Реляционная БД", "Пользователи, устройства, каталог, настройки")
+    ContainerDb(timescale, "TimescaleDB", "Временные ряды", "Телеметрия с устройств")
+    ContainerQueue(broker, "Message Broker", "MQTT/Kafka", "Асинхронный обмен сообщениями")
+}
+
+System_Ext(devices, "Умные устройства", "Датчики и модули партнёров: отопление, освещение, камеры, ворота")
+
+Rel(user, web_app, "Использует", "HTTPS")
+Rel(support, web_app, "Поддерживает", "HTTPS")
+Rel(web_app, api_gateway, "API запросы", "HTTPS/JSON")
+
+Rel(api_gateway, device_service, "Управление устройствами", "JSON-RPC")
+Rel(api_gateway, telemetry_service, "Получение данных", "JSON-RPC")
+Rel(api_gateway, control_service, "Отправка команд", "JSON-RPC")
+Rel(api_gateway, rule_service, "Управление сценариями", "JSON-RPC")
+Rel(api_gateway, user_service, "Аутентификация", "JSON-RPC")
+
+Rel(device_service, postgres, "Читает/пишет", "SQL")
+Rel(user_service, postgres, "Читает/пишет", "SQL")
+Rel(rule_service, postgres, "Читает/пишет", "SQL")
+Rel(telemetry_service, timescale, "Сохраняет телеметрию", "SQL")
+
+Rel(control_service, broker, "Публикует команды", "MQTT")
+Rel(telemetry_service, broker, "Подписан на данные", "MQTT")
+Rel(rule_service, control_service, "Триггеры событий", "MQTT")
+
+Rel(devices, broker, "Отправляет данные / получает команды", "MQTT")
+
+@enduml

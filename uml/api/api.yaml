@@ -1,0 +1,962 @@
+openapi: 3.0.3
+info:
+  title: Smart Home API
+  description: API для системы управления умным домом
+  version: 1.0.0
+
+servers:
+  - url: https://api.smarthome/v1
+    description: Production сервер
+
+tags:
+  - name: Devices
+    description: Управление устройствами
+  - name: Telemetry
+    description: Данные телеметрии
+  - name: Rules
+    description: Сценарии автоматизации
+  - name: Houses
+    description: Управление домами
+
+paths:
+  # 1: Получение списка устройств дома
+  /houses/{houseId}/devices:
+    get:
+      tags:
+        - Devices
+      summary: Получить список устройств дома
+      description: Возвращает список всех устройств, установленных в указанном доме. Поддерживает фильтрацию по типу и статусу устройства.
+      operationId: getDevicesByHouse
+      parameters:
+        - name: houseId
+          in: path
+          required: true
+          description: Уникальный идентификатор дома
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: type
+          in: query
+          required: false
+          description: Фильтр по типу устройства
+          schema:
+            type: string
+            enum: [ heating, lighting, camera, gate, sensor ]
+          example: "lighting"
+        - name: status
+          in: query
+          required: false
+          description: Фильтр по статусу устройства
+          schema:
+            type: string
+            enum: [ online, offline, error ]
+          example: "online"
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Список устройств успешно получен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceListResponse'
+              examples:
+                success:
+                  summary: Успешный ответ
+                  value:
+                    data:
+                      - id: "d290f1ee-6c54-4b01-90e6-d701748f0851"
+                        name: "Лампа в гостиной"
+                        type: "lighting"
+                        serial_number: "LMP-2024-001"
+                        status: "online"
+                        is_active: true
+                        last_seen: "2024-01-15T10:30:00Z"
+                      - id: "d290f1ee-6c54-4b01-90e6-d701748f0852"
+                        name: "Термостат"
+                        type: "heating"
+                        serial_number: "THR-2024-002"
+                        status: "online"
+                        is_active: true
+                        last_seen: "2024-01-15T10:29:00Z"
+                    pagination:
+                      current_page: 1
+                      total_pages: 3
+                      total_items: 45
+                      items_per_page: 20
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Дом не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: "HOUSE_NOT_FOUND"
+                  message: "Дом с указанным идентификатором не найден"
+                  details: null
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: [ ]
+    post:
+      tags:
+        - Devices
+      summary: Зарегистрировать новое устройство
+      description: Регистрирует новое устройство в системе и привязывает его к указанному дому. После регистрации устройство получает уникальный идентификатор и  становится доступным для управления.
+      operationId: registerDevice
+      parameters:
+        - name: houseId
+          in: path
+          required: true
+          description: Уникальный идентификатор дома
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDeviceRequest'
+            examples:
+              lightBulb:
+                summary: Регистрация умной лампы
+                value:
+                  name: "Лампа на кухне"
+                  type_id: "type-lighting-001"
+                  serial_number: "LMP-2024-042"
+                  room: "Кухня"
+                  config:
+                    supports_dimming: true
+                    supports_color: false
+                    max_brightness: 100
+              thermostat:
+                summary: Регистрация термостата
+                value:
+                  name: "Термостат спальня"
+                  type_id: "type-heating-001"
+                  serial_number: "THR-2024-015"
+                  room: "Спальня"
+                  config:
+                    min_temperature: 15
+                    max_temperature: 30
+                    supports_schedule: true
+      responses:
+        '201':
+          description: Устройство успешно зарегистрировано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceResponse'
+              example:
+                id: "d290f1ee-6c54-4b01-90e6-d701748f0854"
+                name: "Лампа на кухне"
+                type:
+                  id: "type-lighting-001"
+                  name: "Умная лампа"
+                  manufacturer: "SmartLight Inc."
+                house_id: "550e8400-e29b-41d4-a716-446655440000"
+                serial_number: "LMP-2024-042"
+                room: "Кухня"
+                status: "offline"
+                is_active: true
+                config:
+                  supports_dimming: true
+                  supports_color: false
+                  max_brightness: 100
+                supported_commands:
+                  - "turn_on"
+                  - "turn_off"
+                  - "set_brightness"
+                created_at: "2024-01-15T10:45:00Z"
+                mqtt_topic: "home/550e8400/devices/d290f1ee-6c54-4b01-90e6-d701748f0854"
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: "INVALID_DEVICE_TYPE"
+                  message: "Указанный тип устройства не существует"
+                  details:
+                    provided_type_id: "invalid-type"
+        '409':
+          description: Конфликт данных
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: "DUPLICATE_SERIAL_NUMBER"
+                  message: "Устройство с указанным серийным номером уже зарегистрировано"
+                  details:
+                    serial_number: "LMP-2024-042"
+        '404':
+          $ref: '#/components/responses/HouseNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: [ ]
+
+
+  # 2: Отправка команды устройству
+  /devices/{deviceId}/commands:
+    post:
+      tags:
+        - Devices
+      summary: Отправить команду устройству
+      description: Отправляет команду на выполнение указанному устройству. Команда передаётся через MQTT брокер асинхронно. Возвращает идентификатор команды для отслеживания статуса.
+      operationId: sendDeviceCommand
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          description: Уникальный идентификатор устройства
+          schema:
+            type: string
+            format: uuid
+          example: "d290f1ee-6c54-4b01-90e6-d701748f0851"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceCommandRequest'
+            examples:
+              turnOn:
+                summary: Включить устройство
+                value:
+                  command: "turn_on"
+                  parameters: { }
+              setBrightness:
+                summary: Установить яркость лампы
+                value:
+                  command: "set_brightness"
+                  parameters:
+                    level: 75
+                    transition_ms: 500
+              setTemperature:
+                summary: Установить температуру термостата
+                value:
+                  command: "set_temperature"
+                  parameters:
+                    target_celsius: 22.5
+                    mode: "heat"
+      responses:
+        '202':
+          description: Команда принята к выполнению
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResponse'
+              example:
+                command_id: "cmd-7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                status: "pending"
+                device_id: "d290f1ee-6c54-4b01-90e6-d701748f0851"
+                command: "set_brightness"
+                created_at: "2024-01-15T10:35:00Z"
+                message: "Команда отправлена на устройство"
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidCommand:
+                  summary: Неподдерживаемая команда
+                  value:
+                    error:
+                      code: "INVALID_COMMAND"
+                      message: "Устройство не поддерживает указанную команду"
+                      details:
+                        supported_commands: [ "turn_on", "turn_off", "set_brightness" ]
+                invalidParameters:
+                  summary: Некорректные параметры
+                  value:
+                    error:
+                      code: "INVALID_PARAMETERS"
+                      message: "Параметр 'level' должен быть в диапазоне 0-100"
+                      details:
+                        field: "parameters.level"
+                        provided_value: 150
+        '404':
+          description: Устройство не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: "DEVICE_NOT_FOUND"
+                  message: "Устройство с указанным идентификатором не найдено"
+                  details: null
+        '409':
+          description: Устройство недоступно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: "DEVICE_OFFLINE"
+                  message: "Устройство находится в статусе offline"
+                  details:
+                    last_seen: "2024-01-15T08:00:00Z"
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: [ ]
+
+  # 3: Получение телеметрии устройства
+  /devices/{deviceId}/telemetry:
+    get:
+      tags:
+        - Telemetry
+      summary: Получить данные телеметрии устройства
+      description: Возвращает исторические данные телеметрии с устройства. Данные хранятся в TimescaleDB и оптимизированы для временных рядов.
+      operationId: getDeviceTelemetry
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          description: Уникальный идентификатор устройства
+          schema:
+            type: string
+            format: uuid
+        - name: metric
+          in: query
+          required: false
+          description: Тип метрики для фильтрации
+          schema:
+            type: string
+            enum: [ temperature, humidity, power_consumption, brightness, motion ]
+          example: "temperature"
+        - name: from
+          in: query
+          required: true
+          description: Начало временного диапазона (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+          example: "2024-01-14T00:00:00Z"
+        - name: to
+          in: query
+          required: true
+          description: Конец временного диапазона (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+          example: "2024-01-15T00:00:00Z"
+        - name: aggregation
+          in: query
+          required: false
+          description: Тип агрегации данных
+          schema:
+            type: string
+            enum: [ none, minute, hour, day ]
+            default: hour
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+      responses:
+        '200':
+          description: Данные телеметрии успешно получены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetryResponse'
+              example:
+                device_id: "d290f1ee-6c54-4b01-90e6-d701748f0851"
+                metric: "temperature"
+                unit: "celsius"
+                aggregation: "hour"
+                time_range:
+                  from: "2024-01-14T00:00:00Z"
+                  to: "2024-01-15T00:00:00Z"
+                data:
+                  - timestamp: "2024-01-14T00:00:00Z"
+                    value: 21.5
+                    min: 20.8
+                    max: 22.1
+                  - timestamp: "2024-01-14T01:00:00Z"
+                    value: 21.2
+                    min: 20.5
+                    max: 21.9
+                  - timestamp: "2024-01-14T02:00:00Z"
+                    value: 20.8
+                    min: 20.1
+                    max: 21.3
+                statistics:
+                  avg: 21.17
+                  min: 20.1
+                  max: 22.1
+                  count: 24
+        '400':
+          description: Некорректные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: "INVALID_TIME_RANGE"
+                  message: "Параметр 'from' должен быть раньше 'to'"
+                  details: null
+        '404':
+          $ref: '#/components/responses/DeviceNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: [ ]
+
+  # 4: Управление сценариями автоматизации
+  /rules:
+    post:
+      tags:
+        - Rules
+      summary: Создать сценарий автоматизации
+      description: Создаёт новый сценарий автоматизации. Сценарий может срабатывать по расписанию или по условию (триггеру).
+      operationId: createRule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRuleRequest'
+            examples:
+              scheduleRule:
+                summary: Сценарий по расписанию
+                value:
+                  name: "Вечернее освещение"
+                  description: "Включить свет в гостиной каждый день в 19:00"
+                  trigger:
+                    type: "schedule"
+                    cron: "0 19 * * *"
+                    timezone: "Europe/Moscow"
+                  actions:
+                    - device_id: "d290f1ee-6c54-4b01-90e6-d701748f0851"
+                      command: "turn_on"
+                      parameters:
+                        brightness: 80
+                  is_active: true
+              conditionRule:
+                summary: Сценарий по условию
+                value:
+                  name: "Автоматическое отопление"
+                  description: "Включить отопление, когда температура ниже 18°C"
+                  trigger:
+                    type: "condition"
+                    condition:
+                      device_id: "d290f1ee-6c54-4b01-90e6-d701748f0853"
+                      metric: "temperature"
+                      operator: "less_than"
+                      value: 18
+                  actions:
+                    - device_id: "d290f1ee-6c54-4b01-90e6-d701748f0852"
+                      command: "turn_on"
+                      parameters:
+                        target_temperature: 22
+                  is_active: true
+      responses:
+        '201':
+          description: Сценарий успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleResponse'
+              example:
+                id: "rule-8a9b0c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d"
+                name: "Вечернее освещение"
+                description: "Включить свет в гостиной каждый день в 19:00"
+                trigger:
+                  type: "schedule"
+                  cron: "0 19 * * *"
+                  timezone: "Europe/Moscow"
+                  next_run: "2024-01-15T19:00:00+03:00"
+                actions:
+                  - device_id: "d290f1ee-6c54-4b01-90e6-d701748f0851"
+                    device_name: "Лампа в гостиной"
+                    command: "turn_on"
+                    parameters:
+                      brightness: 80
+                is_active: true
+                created_at: "2024-01-15T10:40:00Z"
+                updated_at: "2024-01-15T10:40:00Z"
+        '400':
+          description: Некорректные данные сценария
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidCron:
+                  summary: Некорректное cron-выражение
+                  value:
+                    error:
+                      code: "INVALID_CRON"
+                      message: "Некорректное cron-выражение"
+                      details:
+                        provided: "0 25 * * *"
+                        hint: "Часы должны быть в диапазоне 0-23"
+                deviceNotFound:
+                  summary: Устройство не найдено
+                  value:
+                    error:
+                      code: "DEVICE_NOT_FOUND"
+                      message: "Одно или несколько устройств в действиях не найдены"
+                      details:
+                        invalid_device_ids: [ "invalid-uuid" ]
+        '422':
+          description: Ошибка валидации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                error:
+                  code: "VALIDATION_ERROR"
+                  message: "Ошибка валидации данных"
+                  details:
+                    - field: "name"
+                      message: "Поле обязательно для заполнения"
+                    - field: "actions"
+                      message: "Должно быть указано хотя бы одно действие"
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: [ ]
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT токен авторизации
+
+  schemas:
+    # --- Запросы ---
+    DeviceCommandRequest:
+      type: object
+      required:
+        - command
+      properties:
+        command:
+          type: string
+          description: Название команды
+          example: "set_brightness"
+        parameters:
+          type: object
+          description: Параметры команды (зависят от типа устройства)
+          additionalProperties: true
+          example:
+            level: 75
+
+    CreateRuleRequest:
+      type: object
+      required:
+        - name
+        - trigger
+        - actions
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          example: "Вечернее освещение"
+        description:
+          type: string
+          maxLength: 500
+        trigger:
+          $ref: '#/components/schemas/RuleTrigger'
+        actions:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/RuleAction'
+        is_active:
+          type: boolean
+          default: true
+
+    RegisterDeviceRequest:
+      type: object
+      required:
+        - name
+        - type_id
+        - serial_number
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          example: "Лампа на кухне"
+        type_id:
+          type: string
+          description: Идентификатор типа устройства
+        serial_number:
+          type: string
+          maxLength: 50
+          example: "LMP-2024-042"
+        room:
+          type: string
+          maxLength: 50
+          example: "Кухня"
+        config:
+          type: object
+          additionalProperties: true
+
+    # --- Ответы ---
+    DeviceListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceSummary'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    DeviceSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+        serial_number:
+          type: string
+        status:
+          type: string
+          enum: [ online, offline, error ]
+        is_active:
+          type: boolean
+        last_seen:
+          type: string
+          format: date-time
+
+    DeviceResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/DeviceType'
+        house_id:
+          type: string
+          format: uuid
+        serial_number:
+          type: string
+        room:
+          type: string
+        status:
+          type: string
+          enum: [ online, offline, error ]
+        is_active:
+          type: boolean
+        config:
+          type: object
+        supported_commands:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        mqtt_topic:
+          type: string
+
+    DeviceType:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        manufacturer:
+          type: string
+
+    CommandResponse:
+      type: object
+      properties:
+        command_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [ pending, sent, acknowledged, completed, failed ]
+        device_id:
+          type: string
+          format: uuid
+        command:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        message:
+          type: string
+
+    TelemetryResponse:
+      type: object
+      properties:
+        device_id:
+          type: string
+          format: uuid
+        metric:
+          type: string
+        unit:
+          type: string
+        aggregation:
+          type: string
+        time_range:
+          type: object
+          properties:
+            from:
+              type: string
+              format: date-time
+            to:
+              type: string
+              format: date-time
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelemetryDataPoint'
+        statistics:
+          $ref: '#/components/schemas/TelemetryStatistics'
+
+    TelemetryDataPoint:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        value:
+          type: number
+        min:
+          type: number
+        max:
+          type: number
+
+    TelemetryStatistics:
+      type: object
+      properties:
+        avg:
+          type: number
+        min:
+          type: number
+        max:
+          type: number
+        count:
+          type: integer
+
+    RuleTrigger:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum: [ schedule, condition ]
+        cron:
+          type: string
+          description: Cron-выражение (для type=schedule)
+        timezone:
+          type: string
+          default: "UTC"
+        condition:
+          $ref: '#/components/schemas/TriggerCondition'
+
+    TriggerCondition:
+      type: object
+      properties:
+        device_id:
+          type: string
+          format: uuid
+        metric:
+          type: string
+        operator:
+          type: string
+          enum: [ equals, not_equals, greater_than, less_than, greater_or_equal, less_or_equal ]
+        value:
+          oneOf:
+            - type: number
+            - type: string
+            - type: boolean
+
+    RuleAction:
+      type: object
+      required:
+        - device_id
+        - command
+      properties:
+        device_id:
+          type: string
+          format: uuid
+        command:
+          type: string
+        parameters:
+          type: object
+          additionalProperties: true
+
+    RuleResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        trigger:
+          $ref: '#/components/schemas/RuleTrigger'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleAction'
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        total_pages:
+          type: integer
+        total_items:
+          type: integer
+        items_per_page:
+          type: integer
+
+    # --- Ошибки ---
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+
+    ValidationError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+
+  responses:
+    Unauthorized:
+      description: Не авторизован
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "UNAUTHORIZED"
+              message: "Требуется авторизация"
+              details: null
+
+    Forbidden:
+      description: Доступ запрещён
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "FORBIDDEN"
+              message: "Недостаточно прав для выполнения операции"
+              details: null
+
+    DeviceNotFound:
+      description: Устройство не найдено
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "DEVICE_NOT_FOUND"
+              message: "Устройство с указанным идентификатором не найдено"
+              details: null
+
+    HouseNotFound:
+      description: Дом не найден
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "HOUSE_NOT_FOUND"
+              message: "Дом с указанным идентификатором не найден"
+              details: null
+
+    InternalError:
+      description: Внутренняя ошибка сервера
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "INTERNAL_ERROR"
+              message: "Произошла внутренняя ошибка сервера"
+              details: null

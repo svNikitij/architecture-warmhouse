@@ -1,0 +1,67 @@
+@startuml
+title ER-диаграмма системы умного дома
+
+entity "User" as user {
+  *id : UUID <<PK>>
+  --
+  email : VARCHAR(255) <<unique>>
+  password_hash : VARCHAR(255)
+  name : VARCHAR(100)
+  roles: List<Role>
+  created_at : TIMESTAMP
+  isActive: Boolean
+}
+
+entity "House" as house {
+  *id : UUID <<PK>>
+  --
+  *user_id : UUID <<FK>>
+  name : VARCHAR(100)
+  address : VARCHAR(255)
+}
+
+entity "DeviceType" as device_type {
+  *id : UUID <<PK>>
+  --
+  name : VARCHAR(100)
+  manufacturer : VARCHAR(100)
+  description : TEXT
+}
+
+entity "Device" as device {
+  *id : UUID <<PK>>
+  --
+  *type_id : UUID <<FK>>
+  *house_id : UUID <<FK>>
+  serial_number : VARCHAR(100) <<unique>>
+  status : VARCHAR(20)
+  config : JSONB
+}
+
+
+entity "Rule" as rule {
+  *id : UUID <<PK>>
+  --
+  *user_id : UUID <<FK>>
+  name : VARCHAR(100)
+  condition : JSONB
+  schedule : VARCHAR(100)
+  is_active : BOOLEAN
+}
+
+entity "RuleAction" as rule_action {
+  *id : UUID <<PK>>
+  --
+  *rule_id : UUID <<FK>>
+  *device_id : UUID <<FK>>
+  command : JSONB
+}
+
+user ||--o{ house : "владеет"
+house ||--o{ device : "содержит"
+device_type ||--o{ device : "классифицирует"
+user ||--o{ rule : "создаёт"
+rule ||--o{ rule_action : "включает"
+device ||--o{ rule_action : "является целью"
+
+@enduml

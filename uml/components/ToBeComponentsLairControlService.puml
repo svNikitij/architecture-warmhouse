@@ -1,0 +1,32 @@
+@startuml
+title Control Service
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Container(api_gateway, "API Gateway", "Kotlin", "Маршрутизация запросов")
+Container(broker, "Message Broker", "MQTT", "Обмен сообщениями")
+
+Container_Boundary(control_service_boundary, "Control Service") {
+    Component(control_jRPC_api, "Control jRPC API", "Kotlin", "Обработка jRPC команд управления")
+    Component(control_command_validator, "Command Validator", "Kotlin", "Валидация команд")
+    Component(control_heating_controller, "Heating Controller", "Kotlin", "Управление отоплением")
+    Component(control_lighting_controller, "Lighting Controller", "Kotlin", "Управление освещением")
+    Component(control_gate_controller, "Gate Controller", "Kotlin", "Управление воротами")
+    Component(control_camera_controller, "Camera Controller", "Kotlin", "Управление камерами")
+    Component(control_command_publisher, "Command Publisher", "Kotlin", "Публикация команд в брокер")
+}
+
+Rel(control_jRPC_api, control_command_validator, "Валидация команды")
+Rel(control_command_validator, control_heating_controller, "Команда отопления")
+Rel(control_command_validator, control_lighting_controller, "Команда освещения")
+Rel(control_command_validator, control_gate_controller, "Команда ворот")
+Rel(control_command_validator, control_camera_controller, "Команда камеры")
+Rel(control_heating_controller, control_command_publisher, "Подготовленная команда")
+Rel(control_lighting_controller, control_command_publisher, "Подготовленная команда")
+Rel(control_gate_controller, control_command_publisher, "Подготовленная команда")
+Rel(control_camera_controller, control_command_publisher, "Подготовленная команда")
+Rel(control_command_publisher, broker, "Публикация команды", "MQTT")
+Rel(api_gateway, control_jRPC_api, "Команды управления", "jRPC")
+
+
+@enduml

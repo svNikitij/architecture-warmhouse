@@ -48,7 +48,7 @@
 - Технологические ограничения. Все компоненты привязаны к одному технологическому стеку
 
 ### 5. Визуализация контекста системы — диаграмма С4
-[Визуализация контекста системы](https://github.com/svNikitij/architecture-warmhouse-docs/blob/main/uml/IsAsMonolithWarmHouse.puml)
+[Визуализация контекста системы](./uml/IsAsMonolithWarmHouse.puml)
 
 # Задание 2. Проектирование микросервисной архитектуры
 
@@ -56,21 +56,21 @@
 
 **Диаграмма контейнеров (Containers)**
 
-[Ссылка на диаграмму](https://github.com/svNikitij/architecture-warmhouse-docs/blob/main/uml/ToBeContainersLair.puml)
+[Ссылка на диаграмму](./uml/ToBeContainersLair.puml)
 
 **Диаграмма компонентов (Components)**
 
-[Ссылка на общую диаграмму](https://github.com/svNikitij/architecture-warmhouse-docs/blob/main/uml/ToBeContainersLair.puml)
+[Ссылка на общую диаграмму](./uml/ToBeContainersLair.puml)
 
 [Ссылка на диаграммы отдельных сервисов](https://github.com/svNikitij/architecture-warmhouse-docs/tree/main/uml/components)
 
 **Диаграмма кода (Code)**
 
-[Ссылка на диаграмму кода одного из сервисов](https://github.com/svNikitij/architecture-warmhouse-docs/blob/main/uml/code/ToBeCodeLairUserService.puml)
+[Ссылка на диаграмму кода одного из сервисов](./uml/code/ToBeCodeLairUserService.puml)
 
 # Задание 3. Разработка ER-диаграммы
 
-[ER-диаграмма](https://github.com/svNikitij/architecture-warmhouse-docs/blob/main/uml/ToBeERDLair.puml)
+[ER-диаграмма](./uml/ToBeERDLair.puml)
 
 # Задание 4. Создание и документирование API
 
@@ -80,7 +80,7 @@
 
 ### 2. Документация API
 
-[Документация API](https://github.com/svNikitij/architecture-warmhouse-docs/blob/main/uml/api/api.yamlљ)
+[Документация API](./uml/api/api.yaml)
 # Задание 5. Работа с docker и docker-compose
 
 +

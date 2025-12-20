@@ -1,0 +1,26 @@
+@startuml
+title Device Service
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Container(api_gateway, "API Gateway", "Kotlin", "Маршрутизация запросов")
+ContainerDb(postgres, "PostgreSQL", "SQL", "Хранение данных")
+
+Container_Boundary(device_service_boundary, "Device Service") {
+    Component(device_RPC_api, "Device JSON-RPC API", "Kotlin", "Обработка JSON-RPC запросов по устройствам")
+    Component(device_registry, "Device Registry", "Kotlin", "Регистрация и каталогизация устройств")
+    Component(device_catalog, "Device Catalog", "Kotlin", "Управление каталогом типов устройств партнёров")
+    Component(device_config, "Device Config", "Kotlin", "Управление конфигурациями устройств")
+    Component(device_repository, "Device Repository", "Kotlin", "Доступ к данным устройств")
+}
+
+Rel(device_RPC_api, device_registry, "Регистрация нового устройства")
+Rel(device_RPC_api, device_catalog, "Получение списка устройств")
+Rel(device_RPC_api, device_config, "Настройка параметров")
+Rel(device_registry, device_repository, "Сохранение устройства")
+Rel(device_catalog, device_repository, "Чтение каталога")
+Rel(device_config, device_repository, "Сохранение конфига")
+Rel(device_repository, postgres, "SQL запросы", "TCP/SQL")
+
+Rel(api_gateway, device_RPC_api, "Запросы устройств", "JSON-RPC")
+@enduml
