@@ -19,7 +19,7 @@ services:
       interval: 10s
       timeout: 5s
 
-  temperature-api_1:
+  temperature-api:
     build:
       context: ./temperature_api
       dockerfile: Dockerfile
@@ -27,12 +27,12 @@ services:
     depends_on:
       - postgres
     ports:
-      - "8081:8080"
+      - "8081:8081"
     restart: unless-stopped
     networks:
       - smarthome-network
 
-  app_1:
+  app:
     build:
       context: ./smart_home
       dockerfile: Dockerfile
@@ -40,7 +40,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      temperature-api_1:
+      temperature-api:
         condition: service_started
     environment:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/smarthome

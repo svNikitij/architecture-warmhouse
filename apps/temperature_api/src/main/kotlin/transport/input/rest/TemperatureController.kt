@@ -7,22 +7,22 @@ import kotlin.random.Random
 //TODO после теста вынести в dto
 data class TemperatureResponse(
     val sensorId: String,
-    val location: String,
-    val temperature: Double,
+    val status: String,
+    val value: Double,
     val unit: String = "°C"
 )
 
 @RestController
 class TemperatureController {
 
-    @GetMapping("/temperature")
+    @GetMapping("/temperature/{sensorIdParam}")
     fun getTemperature(
+        @PathVariable sensorIdParam: String,
         @RequestParam(required = false) location: String?,
-        @RequestParam(required = false, name = "sensorId") sensorIdParam: String?
     ): TemperatureResponse {
 
         var loc = location ?: ""
-        var sensorId = sensorIdParam ?: ""
+        var sensorId = sensorIdParam
 
         //TODO вынести эту логику в сервис
 
@@ -50,8 +50,8 @@ class TemperatureController {
 
         return TemperatureResponse(
             sensorId = sensorId,
-            location = loc,
-            temperature = temperature
+            status = "active",
+            value = temperature
         )
     }
 }
