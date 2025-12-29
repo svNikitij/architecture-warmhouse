@@ -1,0 +1,35 @@
+@startuml
+title Control Service
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Container(web_app, "Web app", "Kotlin", "Интерфейс для управления устройствами")
+Container(user_service, "User Service", "Kotlin", "Маршрутизация запросов")
+Container(device_service, "Device Service", "Kotlin", "Управление устройствами: регистрация, каталог устройств")
+Container(telemetry_service, "Telemetry Service", "Kotlin", "Сбор и хранение данных с устройств и их состояния")
+Container(control_service, "Control Service", "Kotlin", "Отправка команд устройствам")
+Container(rule_service, "Rule Engine", "Kotlin", "Автоматизация: сценарии и правила работы устройств")
+Container(user_service, "User Service", "Kotlin", "Управление пользователями и доступом")
+
+Container_Boundary(api_gateway_boundary, "API Gateway") {
+    Component(gateway_router, "Request Router", "Kotlin/Chi", "Маршрутизация входящих HTTP запросов")
+    Component(gateway_auth_middleware, "Auth Middleware", "Kotlin/JWT", "Проверка токенов, авторизация запросов")
+    Component(gateway_rate_limiter, "Rate Limiter", "Kotlin", "Ограничение частоты запросов")
+    Component(gateway_request_validator, "Request Validator", "Kotlin", "Валидация входящих данных")
+    Component(gateway_jRPC_client, "jRPC Client Pool", "Kotlin", "Клиенты для взаимодействия с микросервисами")
+}
+
+Rel(gateway_router, gateway_auth_middleware, "Проверяет аутентификацию")
+Rel(gateway_auth_middleware, gateway_rate_limiter, "Проверяет лимиты")
+Rel(gateway_rate_limiter, gateway_request_validator, "Валидирует данные")
+Rel(gateway_request_validator, gateway_jRPC_client, "Маршрутизирует к сервисам")
+
+Rel(web_app, gateway_router, "Взаимодействие с backend")
+
+Rel(gateway_auth_middleware, user_service, "Проверяет токены", "jRPC")
+Rel(gateway_jRPC_client, device_service, "Запросы устройств", "jRPC")
+Rel(gateway_jRPC_client, telemetry_service, "Запросы телеметрии", "jRPC")
+Rel(gateway_jRPC_client, control_service, "Команды управления", "jRPC")
+Rel(gateway_jRPC_client, rule_service, "Запросы сценариев", "jRPC")
+
+@enduml

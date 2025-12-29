@@ -1,0 +1,31 @@
+@startuml
+title User Service
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+
+Container(api_gateway, "API Gateway", "Kotlin", "Маршрутизация запросов")
+ContainerDb(postgres, "PostgreSQL", "SQL", "Хранение данных")
+
+Container_Boundary(user_service_boundary, "User Service") {
+    Component(user_jRPC_server, "User jRPC API", "Kotlin", "Обработка jRPC запросов от API Gateway")
+    Component(user_auth_controller, "Auth Controller", "Kotlin", "Регистрация, вход, выход пользователей")
+    Component(user_controller, "User Controller", "Kotlin", "CRUD операции с пользователями")
+    Component(user_token_manager, "Token Manager", "Kotlin", "Генерация и валидация JWT токенов")
+    Component(user_password_hasher, "Password Hasher", "Kotlin", "Хеширование и проверка паролей")
+    Component(user_repository, "User Repository", "Kotlin", "Работа с БД")
+    Component(user_permission_checker, "Permission Checker", "Kotlin", "Проверка прав доступа к списку устройств")
+}
+
+Rel(user_jRPC_server, user_auth_controller, "Обрабатывает auth запросы")
+Rel(user_jRPC_server, user_controller, "Обрабатывает user запросы")
+Rel(user_auth_controller, user_token_manager, "Генерирует токены")
+Rel(user_auth_controller, user_password_hasher, "Проверяет пароли")
+Rel(user_auth_controller, user_repository, "Создает/обновляет пользователей")
+Rel(user_controller, user_permission_checker, "Проверяет права")
+Rel(user_controller, user_repository, "CRUD операции")
+Rel(user_token_manager, user_repository, "Валидирует токены")
+Rel(api_gateway, user_jRPC_server, "Обрабатывает auth запросы")
+Rel(user_repository, postgres, "SQL запросы", "TCP/SQL")
+
+@enduml

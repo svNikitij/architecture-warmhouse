@@ -1,0 +1,180 @@
+@startuml User Service
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+skinparam linetype ortho
+
+package "Presentation Layer" {
+    class UserjRPCServer {
+        - authController: AuthController
+        - userController: UserController
+        + registerUser(request): RegisterResponse
+        + loginUser(request): LoginResponse
+        + getUserProfile(request): UserResponse
+        + updateUserProfile(request): UserResponse
+        + deleteUser(request): DeleteResponse
+        + validateToken(request): ValidationResponse
+    }
+
+    class AuthController {
+        - tokenManager: TokenManager
+        - passwordHasher: PasswordHasher
+        - userRepository: UserRepository
+        + register(email, password, name): User
+        + login(email, password): AuthToken
+        + logout(token): void
+        + refreshToken(refreshToken): AuthToken
+    }
+
+    class UserController {
+        - userRepository: UserRepository
+        - permissionChecker: PermissionChecker
+        + getUser(userId, requesterId): User
+        + updateUser(userId, data, requesterId): User
+        + deleteUser(userId, requesterId): void
+        + listUsers(requesterId): List<User>
+    }
+}
+
+package "Business Logic Layer" {
+    class TokenManager {
+        - jwtSecret: String
+        - accessTokenTTL: Duration
+        - refreshTokenTTL: Duration
+        + generateAccessToken(userId, roles): String
+        + generateRefreshToken(userId): String
+        + validateToken(token): TokenClaims
+        + revokeToken(token): void
+        - createJWT(claims, ttl): String
+    }
+
+    class PasswordHasher {
+        - algorithm: String = "bcrypt"
+        - saltRounds: Int = 12
+        + hashPassword(plainPassword): String
+        + verifyPassword(plainPassword, hashedPassword): Boolean
+    }
+
+    class PermissionChecker {
+        - roleRepository: RoleRepository
+        + canAccessUser(requesterId, targetUserId): Boolean
+        + hasRole(userId, role): Boolean
+        + hasPermission(userId, permission): Boolean
+        - checkAdminRole(userId): Boolean
+    }
+}
+
+package "Domain Layer" {
+    class User {
+        + id: UUID
+        + email: String
+        + passwordHash: String
+        + name: String
+        + roles: List<Role>
+        + createdAt: Instant
+        + isActive: Boolean
+        + validate(): ValidationResult
+        + hasRole(role): Boolean
+    }
+
+    class Role {
+        + id: UUID
+        + name: String
+        + permissions: List<Permission>
+        + description: String
+    }
+
+    enum Permission {
+        USER_READ
+        USER_WRITE
+        USER_DELETE
+        DEVICE_READ
+        DEVICE_WRITE
+        DEVICE_CONTROL
+        TELEMETRY_READ
+        RULE_READ
+        RULE_WRITE
+        RULE_EXECUTE
+    }
+
+    class AuthToken {
+        + accessToken: String
+        + refreshToken: String
+        + expiresAt: Instant
+        + userId: UUID
+    }
+
+    class TokenClaims {
+        + userId: UUID
+        + roles: List<String>
+        + issuedAt: Instant
+        + expiresAt: Instant
+    }
+}
+
+package "Data Access Layer" {
+    interface UserRepository {
+        + findById(id): User?
+        + findByEmail(email): User?
+        + save(user): User
+        + update(user): User
+        + delete(id): Boolean
+        + findAll(offset, limit): List<User>
+    }
+
+    class UserRepositoryImpl {
+        - dataSource: DataSource
+        - userMapper: UserMapper
+        + findById(id): User?
+        + findByEmail(email): User?
+        + save(user): User
+        + update(user): User
+        + delete(id): Boolean
+        + findAll(offset, limit): List<User>
+        - executeQuery(sql, params): ResultSet
+    }
+
+    class UserMapper {
+        + toEntity(resultSet): User
+        + toDTO(user): UserDTO
+        + toDomain(dto): User
+    }
+}
+
+package "Infrastructure" {
+    class DatabaseConnection {
+        - url: String
+        - username: String
+        - password: String
+        + getConnection(): Connection
+        + executeTransaction(block): Result
+    }
+}
+
+' Relationships
+UserjRPCServer --> AuthController
+UserjRPCServer --> UserController
+
+AuthController --> TokenManager
+AuthController --> PasswordHasher
+AuthController --> UserRepository
+
+UserController --> UserRepository
+UserController --> PermissionChecker
+
+TokenManager ..> TokenClaims : creates
+TokenManager ..> AuthToken : creates
+
+PermissionChecker --> UserRepository
+
+UserRepository <|.. UserRepositoryImpl : implements
+UserRepositoryImpl --> UserMapper
+UserRepositoryImpl --> DatabaseConnection
+
+User --> Role : has
+Role --> Permission : has
+
+AuthController ..> User : creates/uses
+AuthController ..> AuthToken : creates
+UserController ..> User : uses
+
+@enduml

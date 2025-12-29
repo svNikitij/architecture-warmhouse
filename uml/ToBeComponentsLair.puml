@@ -1,0 +1,172 @@
+@startuml
+title Диаграмма компонентов
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+' Внешние системы и акторы
+Person(user, "Пользователь", "Владелец умного дома")
+System_Ext(devices, "Умные устройства", "Датчики и модули партнёров: отопление, освещение, камеры, ворота")
+
+' Инфраструктура
+Container(message_broker, "Message Broker", "MQTT", "Обмен сообщениями")
+ContainerDb(postgres_db, "PostgreSQL", "SQL", "Хранение данных")
+ContainerDb(timescale_db, "TimescaleDB", "", "Временные ряды")
+
+' Web Application
+Container_Boundary(web_app_boundary, "Web Application") {
+    Component(ui_dashboard, "Dashboard UI", "React Component", "Главная панель с обзором всех устройств")
+    Component(ui_devices, "Device Management UI", "React Component", "Управление устройствами: добавление, настройка, удаление")
+    Component(ui_telemetry, "Telemetry View", "React Component", "Графики и история показаний датчиков")
+    Component(ui_scenarios, "Scenarios UI", "React Component", "Создание и управление сценариями автоматизации")
+    Component(ui_profile, "Profile UI", "React Component", "Профиль пользователя, настройки")
+    Component(state_manager, "State Manager", "Redux/Context", "Управление состоянием приложения")
+    Component(api_client, "API Client", "Axios/Fetch", "HTTP клиент для взаимодействия с backend")
+}
+
+' API Gateway
+Container_Boundary(api_gateway_boundary, "API Gateway") {
+    Component(gateway_router, "Request Router", "Kotlin/Chi", "Маршрутизация входящих HTTP запросов")
+    Component(gateway_auth_middleware, "Auth Middleware", "Kotlin/JWT", "Проверка токенов, авторизация запросов")
+    Component(gateway_rate_limiter, "Rate Limiter", "Kotlin", "Ограничение частоты запросов")
+    Component(gateway_request_validator, "Request Validator", "Kotlin", "Валидация входящих данных")
+    Component(gateway_jRPC_client, "jRPC Client Pool", "Kotlin", "Клиенты для взаимодействия с микросервисами")
+}
+
+' User Service
+Container_Boundary(user_service_boundary, "User Service") {
+    Component(user_jRPC_server, "User jRPC API", "Kotlin", "Обработка jRPC запросов от API Gateway")
+    Component(user_auth_controller, "Auth Controller", "Kotlin", "Регистрация, вход, выход пользователей")
+    Component(user_controller, "User Controller", "Kotlin", "CRUD операции с пользователями")
+    Component(user_token_manager, "Token Manager", "Kotlin", "Генерация и валидация JWT токенов")
+    Component(user_password_hasher, "Password Hasher", "Kotlin", "Хеширование и проверка паролей")
+    Component(user_repository, "User Repository", "Kotlin", "Работа с БД")
+    Component(user_permission_checker, "Permission Checker", "Kotlin", "Проверка прав доступа к списку устройств")
+}
+
+' Device Service
+Container_Boundary(device_service_boundary, "Device Service") {
+    Component(device_jRPC_api, "Device jRPC API", "Kotlin", "Обработка jRPC запросов по устройствам")
+    Component(device_registry, "Device Registry", "Kotlin", "Регистрация и каталогизация устройств")
+    Component(device_catalog, "Device Catalog", "Kotlin", "Управление каталогом типов устройств партнёров")
+    Component(device_config, "Device Config", "Kotlin", "Управление конфигурациями устройств")
+    Component(device_repository, "Device Repository", "Kotlin", "Доступ к данным устройств")
+}
+
+' Telemetry Service
+Container_Boundary(telemetry_service_boundary, "Telemetry Service") {
+    Component(telemetry_jRPC_api, "Telemetry jRPC API", "Kotlin", "Обработка jRPC запросов телеметрии")
+    Component(telemetry_collector, "Telemetry Collector", "Kotlin", "Сбор данных с устройств")
+    Component(telemetry_data_parser, "Data Parser", "Kotlin", "Парсинг данных от разных типов устройств")
+    Component(telemetry_data_aggregator, "Data Aggregator", "Kotlin", "Агрегация данных по времени")
+    Component(telemetry_data_validator, "Data Validator", "Kotlin", "Проверка корректности данных")
+    Component(telemetry_repository, "Telemetry Repository", "Kotlin", "Доступ к временным рядам")
+    Component(telemetry_alert_detector, "Alert Detector", "Kotlin", "Обнаружение аномалий и тревог")
+}
+
+' Control Service
+Container_Boundary(control_service_boundary, "Control Service") {
+    Component(control_jRPC_api, "Control jRPC API", "Kotlin", "Обработка jRPC команд управления")
+    Component(control_command_validator, "Command Validator", "Kotlin", "Валидация команд")
+    Component(control_heating_controller, "Heating Controller", "Kotlin", "Управление отоплением")
+    Component(control_lighting_controller, "Lighting Controller", "Kotlin", "Управление освещением")
+    Component(control_gate_controller, "Gate Controller", "Kotlin", "Управление воротами")
+    Component(control_camera_controller, "Camera Controller", "Kotlin", "Управление камерами")
+    Component(control_command_publisher, "Command Publisher", "Kotlin", "Публикация команд в брокер")
+}
+
+' Rule Engine
+Container_Boundary(rule_service_boundary, "Rule Engine") {
+    Component(rule_jRPC_api, "Rule jRPC API", "Kotlin", "Обработка jRPC запросов управления правилами")
+    Component(rule_user_request_service, "User Request Service", "Kotlin", "Ручной запуск сценариев")
+    Component(rule_executor, "Rule Executor", "Kotlin", "Выполнение правил")
+    Component(rule_condition_evaluator, "Condition Evaluator", "Kotlin", "Оценка условий срабатывания")
+    Component(rule_schedule_manager, "Schedule Manager", "Kotlin", "Управление расписаниями")
+    Component(rule_repository, "Rule Repository", "Kotlin", "Доступ к правилам")
+}
+
+' Связи пользователя с UI
+Rel(user, ui_dashboard, "Просматривает", "HTTPS")
+Rel(user, ui_devices, "Управляет", "HTTPS")
+Rel(user, ui_telemetry, "Анализирует", "HTTPS")
+Rel(user, ui_scenarios, "Настраивает", "HTTPS")
+Rel(user, ui_profile, "Редактирует", "HTTPS")
+
+' Связи внутри Web App
+Rel(ui_dashboard, state_manager, "Обновляет состояние")
+Rel(ui_devices, state_manager, "Обновляет состояние")
+Rel(ui_telemetry, state_manager, "Обновляет состояние")
+Rel(ui_scenarios, state_manager, "Обновляет состояние")
+Rel(ui_profile, state_manager, "Обновляет состояние")
+Rel(state_manager, api_client, "Инициирует запросы")
+Rel(api_client, gateway_router, "HTTP запросы", "HTTPS/JSON")
+
+' Связи внутри API Gateway
+Rel(gateway_router, gateway_auth_middleware, "Проверяет аутентификацию")
+Rel(gateway_auth_middleware, gateway_rate_limiter, "Проверяет лимиты")
+Rel(gateway_rate_limiter, gateway_request_validator, "Валидирует данные")
+Rel(gateway_request_validator, gateway_jRPC_client, "Маршрутизирует к сервисам")
+
+' API Gateway -> Сервисы
+Rel(gateway_auth_middleware, user_jRPC_server, "Проверяет токены", "jRPC")
+Rel(gateway_jRPC_client, user_jRPC_server, "Запросы пользователей", "jRPC")
+Rel(gateway_jRPC_client, device_jRPC_api, "Запросы устройств", "jRPC")
+Rel(gateway_jRPC_client, telemetry_jRPC_api, "Запросы телеметрии", "jRPC")
+Rel(gateway_jRPC_client, control_jRPC_api, "Команды управления", "jRPC")
+Rel(gateway_jRPC_client, rule_jRPC_api, "Управление правилами", "jRPC")
+Rel(gateway_jRPC_client, rule_user_request_service, "Запрос выполнения сценария", "jRPC")
+
+' User Service внутренние связи
+Rel(user_jRPC_server, user_auth_controller, "Обрабатывает auth запросы")
+Rel(user_jRPC_server, user_controller, "Обрабатывает user запросы")
+Rel(user_auth_controller, user_token_manager, "Генерирует токены")
+Rel(user_auth_controller, user_password_hasher, "Проверяет пароли")
+Rel(user_auth_controller, user_repository, "Создает/обновляет пользователей")
+Rel(user_controller, user_permission_checker, "Проверяет права")
+Rel(user_controller, user_repository, "CRUD операции")
+Rel(user_token_manager, user_repository, "Валидирует токены")
+Rel(user_repository, postgres_db, "SQL запросы", "TCP/SQL")
+
+' Device Service внутренние связи
+Rel(device_jRPC_api, device_registry, "Регистрация нового устройства")
+Rel(device_jRPC_api, device_catalog, "Получение списка устройств")
+Rel(device_jRPC_api, device_config, "Настройка параметров")
+Rel(device_registry, device_repository, "Сохранение устройства")
+Rel(device_catalog, device_repository, "Чтение каталога")
+Rel(device_config, device_repository, "Сохранение конфига")
+Rel(device_repository, postgres_db, "SQL запросы", "TCP/SQL")
+
+' Telemetry Service внутренние связи
+Rel(message_broker, telemetry_collector, "Данные с устройств", "MQTT")
+Rel(telemetry_collector, telemetry_data_parser, "Сырые данные")
+Rel(telemetry_data_parser, telemetry_data_validator, "Распарсенные данные")
+Rel(telemetry_data_validator, telemetry_alert_detector, "Проверенные данные")
+Rel(telemetry_data_validator, telemetry_repository, "Сохранение данных")
+Rel(telemetry_jRPC_api, telemetry_data_aggregator, "Запрос агрегированных данных")
+Rel(telemetry_data_aggregator, telemetry_repository, "Чтение данных")
+Rel(telemetry_repository, timescale_db, "SQL запросы", "TCP/SQL")
+
+' Control Service внутренние связи
+Rel(control_jRPC_api, control_command_validator, "Валидация команды")
+Rel(control_command_validator, control_heating_controller, "Команда отопления")
+Rel(control_command_validator, control_lighting_controller, "Команда освещения")
+Rel(control_command_validator, control_gate_controller, "Команда ворот")
+Rel(control_command_validator, control_camera_controller, "Команда камеры")
+Rel(control_heating_controller, control_command_publisher, "Подготовленная команда")
+Rel(control_lighting_controller, control_command_publisher, "Подготовленная команда")
+Rel(control_gate_controller, control_command_publisher, "Подготовленная команда")
+Rel(control_camera_controller, control_command_publisher, "Подготовленная команда")
+Rel(control_command_publisher, message_broker, "Публикация команды", "MQTT")
+
+' Rule Engine внутренние связи
+Rel(rule_jRPC_api, rule_repository, "CRUD правил")
+Rel(rule_schedule_manager, rule_condition_evaluator, "Проверка по расписанию")
+Rel(rule_condition_evaluator, rule_executor, "Правило сработало")
+Rel(rule_executor, control_jRPC_api, "Выполнение действий", "jRPC")
+Rel(rule_user_request_service, rule_executor, "Запуск сценария")
+Rel(rule_repository, postgres_db, "SQL запросы", "TCP/SQL")
+
+' Связи с устройствами
+Rel(message_broker, devices, "Управление устройствами", "MQTT")
+Rel(devices, message_broker, "Получение данных от устройств", "MQTT")
+
+@enduml
